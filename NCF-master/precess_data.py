@@ -38,7 +38,7 @@ def load_dataset(test_num=100):
             artist = int(temp[1])
             test_data.append([user,artist])
             line = fd.readline()
-    return train_data, test_data, user_num, item_num, train_mat
+    return train_data, test_data, user_num, item_num
 # def load_dataset(test_num=100):
 #     """ We load all the three file here to save time in each epoch. """
 #     train_data = pd.read_csv(
@@ -112,3 +112,33 @@ class NCFData(data.Dataset):
         item = features[idx][1]
         label = labels[idx]
         return user, item ,label
+
+def fake_insert(user_num,target_item):
+    with open ("/root/autodl-tmp/hetrec2011-lastfm-2k/user_artists.dat",'a') as q:
+        q.write('\n')
+        q.write(str(user_num))
+        q.write('\t')
+        q.write(str(target_item))
+    train_data = pd.read_csv("/root/autodl-tmp/hetrec2011-lastfm-2k/user_artists.dat", \
+                             sep='\t', header=None, names=['user', 'item'], \
+                             usecols=[0, 1], dtype={0: np.int32, 1: np.int32})
+    user_num = train_data['user'].max() + 2
+    item_num = train_data['item'].max() + 1
+
+    train_data = train_data.values.tolist()
+
+    #load ratings as a dok matrix
+    train_mat = sp.dok_matrix((user_num,item_num),dtype=np.float32)
+    for x in train_data:
+        train_mat[x[0], x[1]] = 1.0
+    test_data = []
+    #每个用户
+    with open('/root/autodl-tmp/hetrec2011-lastfm-2k/test_data.txt','r') as fd:
+        line = fd.readline()
+        while line!= None and line!='':
+            temp = line.split()
+            user = int(temp[0])
+            artist = int(temp[1])
+            test_data.append([user,artist])
+            line = fd.readline()
+    return train_data, test_data, user_num, item_num, train_mat

@@ -26,9 +26,23 @@ def metrics(model, test_loader, top_k):
 		_, indices = torch.topk(predictions, top_k)
 		recommends = torch.take(
 				item, indices).cpu().numpy().tolist()
-
 		gt_item = item[0].item()
 		HR.append(hit(gt_item, recommends))
 		NDCG.append(ndcg(gt_item, recommends))
 
 	return np.mean(HR), np.mean(NDCG)
+
+def target_hr(model,test_loader,top_k,target_item):
+	HR, NDCG = [], []
+
+	for user, item, label in test_loader:
+		user = user.cuda()
+		item = item.cuda()
+
+		predictions = model(user, item)
+		_, indices = torch.topk(predictions, top_k)
+		recommends = torch.take(
+			item, indices).cpu().numpy().tolist()
+		HR.append(hit(target_item, recommends))
+		NDCG.append(ndcg(target_item, recommends))
+	return HR, NDCG

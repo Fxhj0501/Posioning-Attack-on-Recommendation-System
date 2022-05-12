@@ -131,28 +131,24 @@ if __name__ == '__main__':
     start=time()
     # Load Data
     data_dir = "/root/autodl-tmp/RecommPoison-main/attacks/Data"
-    ############################## PREPARE DATASET ##########################
-    train_data, test_data, user_num ,item_num, train_mat = precess_data.load_dataset()
 
-    # construct the train and test datasets
-    train_dataset = precess_data.NCFData(
-        train_data, item_num, train_mat, args.num_ng, True)
-    test_dataset = precess_data.NCFData(
-        test_data, item_num, train_mat, 0, False)
-    train_loader = data.DataLoader(train_dataset,
-                                   batch_size=args.batch_size, shuffle=True, num_workers=4)
-    test_loader = data.DataLoader(test_dataset,
-                                  batch_size=args.test_num_ng+1, shuffle=False, num_workers=0)
-
-    # sample_generator = SampleGenerator(path=data_dir)
-    # num_users,num_items=sample_generator.get_size()
-    # user_input, item_input, labels = sample_generator.instance_train_data(num_negatives,seed_value)
-    # evaluate_data=sample_generator.get_evaluate_data()
-    # target_users = sample_generator.get_normal_users(num_users, target_item)
-    # unrated_items = sample_generator.get_negative_items()
-
-    #print('num_users: {}, num_items: {}'.format(num_users,num_items))
-
+    sample_generator = SampleGenerator(path=data_dir)
+    num_users,num_items=sample_generator.get_size()
+    user_input, item_input, labels = sample_generator.instance_train_data(num_negatives,seed_value)
+    evaluate_data=sample_generator.get_evaluate_data()
+    target_users = sample_generator.get_normal_users(num_users, target_item)
+    unrated_items = sample_generator.get_negative_items()
+    # ######### lastfm数据集 ################
+    # train_data, test_data, user_num ,item_num, train_mat = precess_data.load_dataset()
+    # train_dataset = precess_data.NCFData(train_data, item_num, train_mat, 4, True)
+    # test_dataset = precess_data.NCFData(test_data, item_num, train_mat, 0, False)
+    # train_loader = data.DataLoader(train_dataset,batch_size=256, shuffle=True, num_workers=2)
+    # test_loader = data.DataLoader(test_dataset,batch_size=100, shuffle=False, num_workers=0)
+    print('num_users: {}, num_items: {}'.format(num_users,num_items))
+    torch_dataset=UserItemRatingDataset(user_tensor=torch.LongTensor(user_input),
+                                            item_tensor=torch.LongTensor(item_input),
+                                            target_tensor=torch.FloatTensor(labels))
+    loader=Data.DataLoader(dataset=torch_dataset,batch_size=batch_size,shuffle=True,num_workers=2)
     np.random.seed(seed_value)
     seeds_datasets=np.random.randint(100000,size=2*num_users)
 
@@ -205,7 +201,7 @@ if __name__ == '__main__':
             user_input.append(num_users+m0+i*s+j)
             item_input.append(target_item)
             labels.append(1)
-
+            print(num_users+m0+i*s+j)
         poison_model=NeuMF(num_users+m0+s*i+step, num_items, mf_dim, layers).to(device)
         optimizer=optim.Adam(poison_model.parameters(),lr=learning_rate,weight_decay=l2_reg)
 
@@ -222,6 +218,7 @@ if __name__ == '__main__':
             t1=time()
             total_loss=0.0
             for batch_user,batch_item,batch_label in loader:
+            #for batch_user,batch_item,batch_label in train_loader:
                 total_loss+=train_on_batch(poison_model,batch_user,batch_item,batch_label,optimizer,criterion,device)
             t2=time()
             hr, ndcg = evaluate_model(poison_model, evaluate_data, topK,device)
