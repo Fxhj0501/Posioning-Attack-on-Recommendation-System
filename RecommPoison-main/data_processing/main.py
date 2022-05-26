@@ -33,9 +33,10 @@ if __name__ == '__main__':
     # Load Data
     data_dir = args.path + '/'+args.dataset
     
-    data_rating = pd.read_csv("/root/autodl-tmp/neural_collaborative_filtering-master/Data/ml-1m.train.rating", sep=args.sep, header=args.header, names=['userId', 'itemId', 'rating', 'timestamp'],
+    data_rating = pd.read_csv("/root/autodl-tmp/hetrec2011-lastfm-2k/train.dat", sep=args.sep, header=args.header, names=['userId', 'itemId', 'rating', 'timestamp'],
                               engine='python')
-
+    #data_rating = pd.read_csv("/root/autodl-tmp/neural_collaborative_filtering-master/Data/ml-1m.train.rating", sep=args.sep, header=args.header, names=['userId', 'itemId', 'rating', 'timestamp'],
+    #engine='python')
     print('Range of userId is [{}, {}]'.format(data_rating.userId.min(), data_rating.userId.max()))
     print('Range of itemId is [{}, {}]'.format(data_rating.itemId.min(), data_rating.itemId.max()))
     

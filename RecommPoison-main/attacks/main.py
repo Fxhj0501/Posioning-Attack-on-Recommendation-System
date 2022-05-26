@@ -25,7 +25,7 @@ def parse_args():
                         help='Input data path.')
     parser.add_argument('--dataset', nargs='?', default='ml-100k',
                         help='Choose a dataset.')
-    parser.add_argument('--epochs', type=int, default=20,
+    parser.add_argument('--epochs', type=int, default=10,
                         help='Number of epochs.')
     parser.add_argument('--batch_size', type=int, default=256,
                         help='Batch size.')
@@ -54,7 +54,7 @@ def parse_args():
                         help='The maximum number of filler items for one fake user.')
     parser.add_argument('--topK', type=int, default=10,
                         help='The maximum number of items in a user\'s recommendation list.')
-    parser.add_argument('--targetItem', type=int, default=100,
+    parser.add_argument('--targetItem', type=int, default=71,
                         help='The target item ID.')
     parser.add_argument('--prob', type=float, default=1.0,
                         help='Probability attenuation coefficient.')
@@ -131,8 +131,9 @@ if __name__ == '__main__':
     start=time()
     # Load Data
     data_dir = "/root/autodl-tmp/RecommPoison-main/attacks/Data"
-
-    sample_generator = SampleGenerator(path=data_dir)
+    data_rating = pd.read_csv("/root/autodl-tmp/hetrec2011-lastfm-2k/train.dat", sep='\t', header=None, names=['userId', 'itemId', 'rating', 'timestamp'],
+                              engine='python')
+    sample_generator = SampleGenerator(path=data_dir,ratings = data_rating)
     num_users,num_items=sample_generator.get_size()
     user_input, item_input, labels = sample_generator.instance_train_data(num_negatives,seed_value)
     evaluate_data=sample_generator.get_evaluate_data()
@@ -201,7 +202,6 @@ if __name__ == '__main__':
             user_input.append(num_users+m0+i*s+j)
             item_input.append(target_item)
             labels.append(1)
-            print(num_users+m0+i*s+j)
         poison_model=NeuMF(num_users+m0+s*i+step, num_items, mf_dim, layers).to(device)
         optimizer=optim.Adam(poison_model.parameters(),lr=learning_rate,weight_decay=l2_reg)
 
@@ -214,30 +214,30 @@ if __name__ == '__main__':
         
         poison_model.train()
         best_hr, best_ndcg, best_iter=-1,-1,-1
-        for epoch in range(num_epochs):
+        #for epoch in range(num_epochs):
+        for epoch in range(3):
             t1=time()
             total_loss=0.0
             for batch_user,batch_item,batch_label in loader:
-            #for batch_user,batch_item,batch_label in train_loader:
                 total_loss+=train_on_batch(poison_model,batch_user,batch_item,batch_label,optimizer,criterion,device)
             t2=time()
             hr, ndcg = evaluate_model(poison_model, evaluate_data, topK,device)
             print('Epoch {} [{:.1f}s]: HR = {:.4f}, NDCG = {:.4f}, loss = {:.4f} [{:.1f}s]'.format(epoch,t2-t1,hr,ndcg,total_loss,time()-t2))
             if best_hr<hr:
-                torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_tmp_poison_model.tar')
+                torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_tmp_poison_model.tar')
                 best_hr,best_ndcg,best_iter=hr,ndcg,epoch
         
-        poison_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_tmp_poison_model.tar'))
-        torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_tmp_poison_model.tar')
+        poison_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_tmp_poison_model.tar'))
+        torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_tmp_poison_model.tar')
         poison_model.eval()
-
         target_hr=get_single_HR(poison_model,num_users,target_users,unrated_items,target_item,topK,device)
         print('Initial target HR: {:.4f}, best HR: {:.4f}'.format(target_hr,best_hr))
 
         best_hr=target_hr
         stop=False
         poison_model.train()
-        for epoch in range(total_round):
+        #for epoch in range(total_round):
+        for epoch in range(2):
             t1=time()
             loss1=get_f(poison_model,target_users,unrated_items,candidate_users,candidate_items,alpha,kappa,reg_u,target_item,topK,optimizer,device)
 
@@ -253,10 +253,10 @@ if __name__ == '__main__':
             
             if target_hr>best_hr:
                 best_hr=target_hr
-                torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_modified_poison_model.tar')
+                torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_modified_poison_model.tar')
             
 
-        poison_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_modified_poison_model.tar'))
+        poison_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_modified_poison_model.tar'))
         poison_model.eval()
 
         
@@ -303,16 +303,17 @@ if __name__ == '__main__':
     loader=Data.DataLoader(dataset=torch_dataset,batch_size=batch_size,shuffle=True,num_workers=2)
 
     print('Filler items:\n{}'.format(filler_items))
-    isExists=os.path.exists('/root/autodl-tmp/RecommPoison-main/attacks/posion')
+    isExists=os.path.exists('/root/autodl-tmp/RecommPoison-main/attacks/posion_model')
     if not isExists:
-        os.makedirs('poison')
+        os.makedirs('/root/autodl-tmp/RecommPoison-main/attacks/posion_model')
     with open("poison/poison_{}_our_attack_{}_{}_{}.txt".format(args.dataset,target_item,m,n),"w") as f:
         f.writelines(str(filler_items))
 
 
     # The final evaluation
     res=[]
-    for i in range(30):
+    #for i in range(30):
+    for i in range(5):
         poison_model=NeuMF(num_users+m, num_items, mf_dim, layers).to(device)
         optimizer=optim.Adam(poison_model.parameters(),lr=learning_rate,weight_decay=l2_reg)
         
@@ -328,11 +329,11 @@ if __name__ == '__main__':
             hr, ndcg = evaluate_model(poison_model, evaluate_data, topK,device)
             print('Epoch {} [{:.1f}s]: HR = {:.4f}, NDCG = {:.4f}, loss = {:.4f} [{:.1f}s]'.format(epoch,t2-t1,hr,ndcg,total_loss,time()-t2))
             if best_hr<hr:
-                torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_poison_model.tar')
+                torch.save(poison_model.state_dict(), '/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_poison_model.tar')
                 best_hr,best_ndcg,best_iter=hr,ndcg,epoch
         
         print('End. Best Iteration {}:  HR = {:.4f}, NDCG = {:.4f}. '.format(best_iter, best_hr, best_ndcg))
-        poison_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_poison_model.tar'))
+        poison_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/model/pytorch_poison_model.tar'))
         poison_model.eval()
 
         hr=get_single_HR(poison_model,num_users,target_users,unrated_items,target_item,topK,device)

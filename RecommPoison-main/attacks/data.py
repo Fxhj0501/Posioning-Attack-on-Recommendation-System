@@ -9,7 +9,7 @@ import torch.utils.data as Data
 class SampleGenerator(object):
     """Construct dataset for NCF"""
 
-    def __init__(self, path):
+    def __init__(self, path,ratings):
         """
         args:
             ratings: pd.DataFrame, which contains 4 columns = ['userId', 'itemId', 'rating', 'timestamp']
@@ -21,7 +21,7 @@ class SampleGenerator(object):
         self.train_ratings = self._binarize(train_ratings)
         self.num_users,self.num_items=self.train_ratings.userId.max()+1,max(self.train_ratings.itemId.max(),self.evaluate_negative_samples.itemId.max())+1
         self.item_pool = set(list(range(self.num_items)))
-        self.negatives = self._sample_negative(train_ratings)
+        self.negatives = self._sample_negative(ratings)
 
     def _normalize(self, ratings):
         """normalize into [0, 1] from [0, max_rating], explicit feedback"""

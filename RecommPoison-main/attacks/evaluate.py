@@ -59,8 +59,11 @@ def get_single_HR(model,num_users,normal_users,negative_reference,target_item,to
     count=0.0
     with torch.no_grad():
         for user in normal_users:
-            ratings=model(torch.LongTensor([user]*len(negative_reference[user])).to(device),torch.LongTensor(negative_reference[user]).to(device))
-            ratings,indices=torch.topk(ratings.view(-1),topK,dim=0,largest=True)
+            try:
+                ratings=model(torch.LongTensor([user]*len(negative_reference[user])).to(device),torch.LongTensor(negative_reference[user]).to(device))
+            except IndexError:
+                print(user)
+            _,indices=torch.topk(ratings.view(-1),topK,dim=0,largest=True)
             recommendation=[negative_reference[user][idx] for idx in indices]
             if target_item in recommendation:
                 count+=1

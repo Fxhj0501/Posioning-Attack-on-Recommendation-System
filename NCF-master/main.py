@@ -61,15 +61,21 @@ parser.add_argument("--gpu",
 	type=str,
 	default="0",  
 	help="gpu card ID")
+parser.add_argument('--rounds',
+	type=int,
+	default=5,
+	help='Number of rounds to update poison model.')
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 cudnn.benchmark = True
+toal_round = args.rounds
 
 
 ############################## PREPARE DATASET ##########################
 train_data, test_data, user_num ,item_num = precess_data.load_dataset()
-
+target_item = precess_data.get_normal_users(target_item=100)
+unrated_items = precess_data.load_unrated_items()
 # # construct the train and test datasets
 # train_dataset = precess_data.NCFData(
 # 		train_data, item_num, train_mat, args.num_ng, True)
@@ -99,9 +105,11 @@ steps = [1,1]
 #开始生成虚假用户
 target_item = 100
 print("Start generating posion model")
+count = 1
 for i,step in enumerate(steps):
 	candidate_users,candidate_items = [],[]
-	print("start 2 fake user")
+	print("start" + "count" + "fake user")
+	#一次只插入一个假用户
 	for j in range(step):
 		# candidate_users.extend([user_num+m0+i+j]*(item_num-1))
 		# tmp=list(range(item_num))
@@ -143,15 +151,24 @@ for i,step in enumerate(steps):
 		HR, NDCG = evaluate.metrics(posion_model, test_loader, args.top_k)
 		if HR > best_hr:
 			best_hr, best_ndcg = HR, NDCG
-			torch.save(posion_model.state_dict(),'{}{}.pth'.format(config.model_path, config.model))
+			torch.save(posion_model.state_dict(),'/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_tmp_poison_model.tar')
 		elapsed_time = time.time() - start_time
 		print("The time elapse of epoch {:03d}".format(epoch) + " is: " +
 			  time.strftime("%H: %M: %S", time.gmtime(elapsed_time)))
 		print("HR: {:.3f}\tNDCG: {:.3f}".format(np.mean(HR), np.mean(NDCG)))
-	posion_model.load_state_dict(torch.load('{}{}.pth'.format(config.model_path, config.model)))
+	count += 1
+	posion_model.load_state_dict(torch.load('/root/autodl-tmp/RecommPoison-main/attacks/Data/pytorch_tmp_poison_model.tar'))
 	torch.save(posion_model.state_dict(),'{}{}.pth'.format(config.model_path, config.model))
-	target_hr,target_ndcg = evaluate.target_hr(posion_model,test_loader,args.top_k,target_item)
-	print('Initial target HR: {:.4f}, best HR: {:.4f}'.format(np.mean(target_hr), np.mean(target_ndcg)))
+	posion_model.eval()
+	target_hr = evaluate.target_hr(posion_model,test_loader,args.top_k,target_item)
+	print('Initial target HR: {:.4f}, best HR: {:.4f}'.format(np.mean(target_hr), best_hr))
+	#不知道啥意思
+	best_hr = target_hr
+	stop = False
+	posion_model.train()
+	for epoch in range(args.rounds):
+		pass
+
 # writer = SummaryWriter() # for visualization
 
 # ########################### TRAINING #####################################

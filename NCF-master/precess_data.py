@@ -142,3 +142,40 @@ def fake_insert(user_num,target_item):
             test_data.append([user,artist])
             line = fd.readline()
     return train_data, test_data, user_num, item_num, train_mat
+
+def load_unrated_items():
+    #negative items for uach user
+    train_data = pd.read_csv("/root/autodl-tmp/hetrec2011-lastfm-2k/user_artists.dat", \
+                             sep='\t', header=None, names=['user', 'item'], \
+                             usecols=[0, 1], dtype={0: np.int32, 1: np.int32})
+    user_num = train_data['user'].max() + 1
+    unrated_items = []
+    with open('/root/autodl-tmp/hetrec2011-lastfm-2k/test_data.txt','r') as fd:
+        for user in range(2,user_num):
+            row = []
+            if user == 2:
+                line = fd.readline()
+            while line!= None and line!='':
+                temp = line.split()
+                if int(temp[0]) == user:
+                    artist = int(temp[1])
+                    row.append(artist)
+                else:
+                    unrated_items.append(row)
+                    break
+                line = fd.readline()
+    return unrated_items
+unrated_items = load_unrated_items()
+
+def get_normal_users(target_item):
+    """get normal users who haven't rated the target item"""
+    train_data = pd.read_csv("/root/autodl-tmp/hetrec2011-lastfm-2k/user_artists.dat", \
+                             sep='\t', header=None, names=['user', 'item'], \
+                             usecols=[0, 1], dtype={0: np.int32, 1: np.int32})
+    rating_users = train_data['user'][(train_data['item'] == target_item)].drop_duplicates()
+    user_num = train_data['user'].max() + 1
+    target_user = list(range(user_num))
+    for r in rating_users:
+        target_user.remove(r)
+    return target_user
+

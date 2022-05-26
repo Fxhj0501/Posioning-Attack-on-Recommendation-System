@@ -44,5 +44,4 @@ def target_hr(model,test_loader,top_k,target_item):
 		recommends = torch.take(
 			item, indices).cpu().numpy().tolist()
 		HR.append(hit(target_item, recommends))
-		NDCG.append(ndcg(target_item, recommends))
-	return HR, NDCG
+	return HR
