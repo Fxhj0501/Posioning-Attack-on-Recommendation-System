@@ -44,7 +44,7 @@ def parse_args():
                         help='The maximum number of filler items for one fake user.')
     parser.add_argument('--topK', type=int, default=10,
                         help='The maximum number of items in a user\'s recommendation list.')
-    parser.add_argument('--targetItem', type=int, default=1072,
+    parser.add_argument('--targetItem', type=int, default=71,
                         help='The target item ID.')
     return parser.parse_args()
 
@@ -70,15 +70,16 @@ if __name__ == '__main__':
 
     start=time()
     # Load Data
-    data_dir = args.path + args.dataset
 
-    sample_generator = SampleGenerator(path=data_dir)
-    num_users,num_items=sample_generator.get_size() 
+    data_dir = "/root/autodl-tmp/RecommPoison-main/attacks/Data"
+    data_rating = pd.read_csv("/root/autodl-tmp/hetrec2011-lastfm-2k/train.dat", sep='\t', header=None, names=['userId', 'itemId', 'rating', 'timestamp'],
+                              engine='python')
+    sample_generator = SampleGenerator(path=data_dir,ratings = data_rating)
+    num_users,num_items=sample_generator.get_size()
     user_input, item_input, labels = sample_generator.instance_train_data(num_negatives,seed_value)
     evaluate_data=sample_generator.get_evaluate_data()
     normal_users = sample_generator.get_normal_users(num_users, target_item)
     negative_items = sample_generator.get_negative_items()
-
     print('num_users: {}, num_items: {}'.format(num_users,num_items))
 
     np.random.seed(seed_value)
@@ -121,14 +122,14 @@ if __name__ == '__main__':
     criterion=nn.BCELoss()
 
     res=[]
-    for i in range(30):
+    for i in range(5):
         model=NeuMF(num_users+m, num_items, mf_dim, layers).to(device)
         optimizer=optim.Adam(model.parameters(),lr=learning_rate,weight_decay=l2_reg)
         
         print('Start training model #{}'.format(i))
         model.train()
         best_hr, best_ndcg, best_iter=-1,-1,-1
-        for epoch in range(num_epochs):
+        for epoch in range(10):
             t1=time()
             total_loss=0.0
             for batch_user,batch_item,batch_label in loader:

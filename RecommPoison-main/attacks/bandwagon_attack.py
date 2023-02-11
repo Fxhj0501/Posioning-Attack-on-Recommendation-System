@@ -44,7 +44,7 @@ def parse_args():
                         help='The maximum number of filler items for one fake user.')
     parser.add_argument('--topK', type=int, default=10,
                         help='The maximum number of items in a user\'s recommendation list.')
-    parser.add_argument('--targetItem', type=int, default=1072,
+    parser.add_argument('--targetItem', type=int, default=71,
                         help='The target item ID.')
     return parser.parse_args()
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     criterion=nn.BCELoss()
 
     res=[]
-    for i in range(30):
+    for i in range(3):
         model=NeuMF(num_users+m, num_items, mf_dim, layers).to(device)
         optimizer=optim.Adam(model.parameters(),lr=learning_rate,weight_decay=l2_reg)
         

@@ -70,7 +70,7 @@ def target_loss(x, y,kappa):
         return loss
     return -kappa
 
-def get_f(model,target_users,unrated_items,candidate_users,candidate_items,alpha,kappa,reg_u,target_item,topK,optimizer,device):
+def get_f(model,target_users,unrated_items,candidate_users,candidate_items,alpha,kapget_freg_u,target_item,topK,optimizer,device):
     total_loss=0.0
 
     target_users=np.array(target_users)
